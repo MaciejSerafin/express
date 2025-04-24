@@ -55,7 +55,7 @@ pipeline {
         echo '🚀 Starting the server...'
         sh '''
           mkdir -p $RUN_DIR
-          tar -xzf $PACKAGE_NAME -C $RUN_DIR --strip-components=2
+          tar -xzf $PACKAGE_NAME -C $RUN_DIR
           cd $RUN_DIR
           npm install
           nohup npm start &
