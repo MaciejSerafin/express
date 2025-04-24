@@ -1,15 +1,15 @@
 pipeline {
     agent any
-    
+
     environment {
-        APP_DIR = '/root/express-run'
+        // Definicje zmiennych środowiskowych, jeśli potrzeba
     }
 
     stages {
-        stage('Clone Repository') {
+        stage('Checkout') {
             steps {
-                echo "Cloning repository..."
-                git 'https://github.com/expressjs/express.git'
+                echo "Checking out the repository..."
+                checkout scm
             }
         }
 
@@ -20,54 +20,58 @@ pipeline {
             }
         }
 
+        stage('Build') {
+            steps {
+                echo "Building the project..."
+                // Jeśli aplikacja wymaga skryptu build, a nie ma go, można to pominąć lub dodać odpowiednią komendę
+                sh 'npm run build || echo "No build script found"'
+            }
+        }
+
         stage('Archive Build') {
             steps {
                 echo "Archiving build artifact..."
-                // Spakowanie aplikacji
+                // Tworzenie archiwum z aplikacji
                 sh 'tar -czf express.tar.gz .'
-                echo "Artifact published to workspace: express.tar.gz"
+                echo "Artifact archived as express.tar.gz"
                 archiveArtifacts artifacts: 'express.tar.gz', allowEmptyArchive: true
             }
         }
 
         stage('Start Server') {
             steps {
-                echo "🚀 Starting the server..."
-                script {
-                    // Tworzymy katalog do uruchomienia aplikacji
-                    sh 'mkdir -p /root/express-run'
-                    // Rozpakowanie artefaktu
-                    sh 'tar -xzf express.tar.gz -C /root/express-run'
-                    // Przechodzimy do katalogu aplikacji
-                    sh 'cd /root/express-run && npm start'
-                }
+                echo "Starting the server..."
+                // Możesz dodać komendę uruchomienia serwera, np.:
+                // sh 'npm start'
             }
         }
 
         stage('Test') {
             steps {
                 echo "Running tests..."
-                sh 'npm test'
+                // Uruchamianie testów, np.:
+                // sh 'npm test'
             }
         }
 
         stage('Deploy') {
             steps {
-                echo "Deploying the application..."
-                // Twoje kroki wdrożeniowe
+                echo "Deploying application..."
+                // Proces wdrożenia aplikacji, np.:
+                // sh 'some-deploy-command'
             }
         }
     }
 
     post {
         always {
-            echo 'Pipeline finished!'
+            echo "Pipeline finished!"
         }
         success {
-            echo 'Pipeline succeeded!'
+            echo "Pipeline succeeded!"
         }
         failure {
-            echo 'Pipeline failed!'
+            echo "Pipeline failed!"
         }
     }
 }
