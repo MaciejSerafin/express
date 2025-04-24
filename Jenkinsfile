@@ -9,7 +9,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo "Cloning repository..."
-                checkout scm
+                git 'https://github.com/MaciejSerafin/express.git'
             }
         }
 
@@ -24,9 +24,12 @@ pipeline {
             steps {
                 echo "Checking if 'start' script exists in package.json..."
                 script {
-                    def hasStart = sh(script: "node -e \"const p = require('./package.json'); if (!p.scripts || !p.scripts.start) process.exit(1);\"", returnStatus: true) == 0
-                    if (!hasStart) {
-                        error("Missing 'start' script in package.json. Please define it to run the server.")
+                    def hasStartScript = sh(
+                        script: 'node -e "const p = require(\'./package.json\'); if (!p.scripts || !p.scripts.start) process.exit(1);"',
+                        returnStatus: true
+                    )
+                    if (hasStartScript != 0) {
+                        error "ERROR: Missing 'start' script in package.json. Please define it to run the server."
                     }
                 }
             }
@@ -35,22 +38,18 @@ pipeline {
         stage('Start Server') {
             steps {
                 echo "Starting the Node.js server..."
-                sh 'npm start &'
-                sleep time: 5, unit: 'SECONDS' // Dać serwerowi czas na uruchomienie
-                sh 'curl -I http://localhost:3000 || true' // Sprawdzenie, czy serwer ruszył (zakłada port 3000)
+                // Jeśli chcesz, żeby serwer działał w tle (np. na stałe po uruchomieniu):
+                sh 'nohup npm start > output.log 2>&1 &'
             }
         }
     }
 
     post {
-        always {
-            echo "Pipeline completed."
-        }
         success {
-            echo "Server started successfully!"
+            echo '✅ Server started successfully!'
         }
         failure {
-            echo "Pipeline failed. Check logs for more info."
+            echo '❌ Pipeline failed. Check the logs above.'
         }
     }
 }
