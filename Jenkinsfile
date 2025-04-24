@@ -1,6 +1,9 @@
 pipeline {
     agent any
 
+    environment {
+        // Definicje zmiennych środowiskowych, jeśli potrzeba
+    }
 
     stages {
         stage('Checkout') {
@@ -28,10 +31,11 @@ pipeline {
         stage('Archive Build') {
             steps {
                 echo "Archiving build artifact..."
-                // Tworzenie archiwum z aplikacji
-                sh 'tar -czf express.tar.gz .'
-                echo "Artifact archived as express.tar.gz"
-                archiveArtifacts artifacts: 'express.tar.gz', allowEmptyArchive: true
+                // Tworzenie nowego katalogu do archiwizacji
+                sh 'mkdir -p /root/express-artifacts'
+                sh 'tar -czf /root/express-artifacts/express.tar.gz .'
+                echo "Artifact archived as /root/express-artifacts/express.tar.gz"
+                archiveArtifacts artifacts: '/root/express-artifacts/express.tar.gz', allowEmptyArchive: true
             }
         }
 
