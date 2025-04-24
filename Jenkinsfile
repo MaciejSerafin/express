@@ -47,9 +47,6 @@ pipeline {
     }
 
     post {
-        always {
-            junit '**/test/**/*.xml'
-        }
         success {
             echo '✅ Pipeline completed successfully!'
         }
