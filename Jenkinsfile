@@ -34,7 +34,7 @@ pipeline {
         echo '📦 Preparing files for deployment...'
         sh '''
           mkdir -p $APP_DIR
-          cp -r * $APP_DIR
+          cp -r * $APP_DIR  # Kopiuje wszystkie pliki do katalogu tymczasowego
         '''
       }
     }
@@ -57,6 +57,7 @@ pipeline {
           mkdir -p $RUN_DIR
           tar -xzf $PACKAGE_NAME -C $RUN_DIR
           cd $RUN_DIR
+          ls -la  # Wydrukuj zawartość katalogu, aby upewnić się, że package.json jest obecny
           npm install
           nohup npm start &
           echo "🌐 App started at http://localhost:3000"
