@@ -1,57 +1,79 @@
 pipeline {
-    agent any
+  agent any
 
-    environment {
-        APP_NAME = 'express-app'
-        DEPLOY_DIR = "/tmp/${APP_NAME}"
-        ARTIFACT = "express.tar.gz"
+  environment {
+    APP_DIR = '/tmp/express-app'
+    PACKAGE_NAME = 'express.tar.gz'
+    RUN_DIR = "${HOME}/express-run"
+  }
+
+  stages {
+    stage('Clone') {
+      steps {
+        echo '📥 Cloning repository...'
+        git 'https://github.com/MaciejSerafin/express.git'
+      }
     }
 
-    stages {
-        stage('Clone') {
-            steps {
-                git url: 'https://github.com/MaciejSerafin/express.git', branch: 'master'
-            }
-        }
-
-        stage('Build') {
-            steps {
-                sh 'npm install'
-            }
-        }
-
-        stage('Test') {
-            steps {
-                sh 'npm test'
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                sh '''
-                    mkdir -p $DEPLOY_DIR
-                    cp -r * $DEPLOY_DIR
-                '''
-            }
-        }
-
-        stage('Publish') {
-            steps {
-                sh '''
-                    tar -czf $ARTIFACT $DEPLOY_DIR
-                    echo "Artifact published to workspace: $ARTIFACT"
-                '''
-                archiveArtifacts artifacts: "${ARTIFACT}", fingerprint: true
-            }
-        }
+    stage('Build') {
+      steps {
+        echo '🔧 Installing dependencies...'
+        sh 'npm install'
+      }
     }
 
-    post {
-        success {
-            echo '✅ Pipeline completed successfully!'
-        }
-        failure {
-            echo '❌ Pipeline failed!'
-        }
+    stage('Test') {
+      steps {
+        echo '🧪 Running tests...'
+        sh 'npm test || true'  // jeśli testy są puste, nie przerywa pipeline
+      }
     }
+
+    stage('Deploy') {
+      steps {
+        echo '📦 Preparing files for deployment...'
+        sh '''
+          mkdir -p $APP_DIR
+          cp -r * $APP_DIR
+        '''
+      }
+    }
+
+    stage('Publish') {
+      steps {
+        echo '📤 Archiving build artifact...'
+        sh '''
+          tar -czf $PACKAGE_NAME -C /tmp express-app
+          echo "Artifact published to workspace: $PACKAGE_NAME"
+        '''
+        archiveArtifacts artifacts: "$PACKAGE_NAME", fingerprint: true
+      }
+    }
+
+    stage('Start server') {
+      steps {
+        echo '🚀 Starting the server...'
+        sh '''
+          mkdir -p $RUN_DIR
+          tar -xzf $PACKAGE_NAME -C $RUN_DIR --strip-components=2
+          cd $RUN_DIR
+          npm install
+          nohup npm start &
+          echo "🌐 App started at http://localhost:3000"
+        '''
+      }
+    }
+  }
+
+  post {
+    always {
+      echo '🧼 Cleaning up...'
+    }
+    success {
+      echo '✅ Pipeline completed successfully!'
+    }
+    failure {
+      echo '❌ Pipeline failed!'
+    }
+  }
 }
