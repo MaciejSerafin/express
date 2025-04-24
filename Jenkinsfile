@@ -8,7 +8,7 @@ pipeline {
     stages {
         stage('Clone') {
             steps {
-                git url: 'https://github.com/twoj-login/express.git', branch: 'master'
+                git url: 'https://github.com/MaciejSerafin/express.git', branch: 'master'
             }
         }
 
