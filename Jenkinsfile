@@ -1,80 +1,86 @@
 pipeline {
-  agent any
-
-  environment {
-    APP_DIR = '/tmp/express-app'
-    PACKAGE_NAME = 'express.tar.gz'
-    RUN_DIR = "${HOME}/express-run"
-  }
-
-  stages {
-    stage('Clone') {
-      steps {
-        echo '📥 Cloning repository...'
-        git 'https://github.com/MaciejSerafin/express.git'
-      }
+    agent any
+    
+    environment {
+        APP_DIR = '/root/express-run'
     }
 
-    stage('Build') {
-      steps {
-        echo '🔧 Installing dependencies...'
-        sh 'npm install'
-      }
+    stages {
+        stage('Clone Repository') {
+            steps {
+                echo "Cloning repository..."
+                git 'https://github.com/expressjs/express.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo "Installing dependencies and building..."
+                script {
+                    // Sprawdzenie czy plik package.json istnieje
+                    if (!fileExists('package.json')) {
+                        echo "Brak pliku package.json w katalogu repozytorium!"
+                        error "Brak pliku package.json, niemożliwe jest zbudowanie aplikacji!"
+                    }
+                    
+                    // Instalacja zależności i budowanie
+                    sh 'npm install'
+                    sh 'npm run build' // Jeśli masz skrypt build w package.json, zmień wg potrzeb
+                }
+            }
+        }
+
+        stage('Archive Build') {
+            steps {
+                echo "Archiving build artifact..."
+                // Spakowanie aplikacji
+                sh 'tar -czf express.tar.gz -C $APP_DIR express-app'
+                echo "Artifact published to workspace: express.tar.gz"
+                archiveArtifacts artifacts: 'express.tar.gz', allowEmptyArchive: true
+            }
+        }
+
+        stage('Start Server') {
+            steps {
+                echo "🚀 Starting the server..."
+                script {
+                    // Tworzymy katalog do uruchomienia aplikacji
+                    sh 'mkdir -p /root/express-run'
+                    // Rozpakowanie artefaktu
+                    sh 'tar -xzf express.tar.gz -C /root/express-run'
+                    // Przechodzimy do katalogu aplikacji
+                    sh 'cd /root/express-run && npm start' // Uruchomienie aplikacji w przypadku Node.js
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo "Running tests..."
+                // Uruchomienie testów jeśli są zdefiniowane
+                sh 'npm test' // Zmieniaj w zależności od konfiguracji
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo "Deploying the application..."
+                // Twoje kroki wdrożeniowe
+                // Na przykład, może to być upload na serwer produkcyjny
+                // sh 'scp express-app.tar.gz user@server:/path/to/deploy'
+            }
+        }
     }
 
-    stage('Test') {
-      steps {
-        echo '🧪 Running tests...'
-        sh 'npm test || true'  // jeśli testy są puste, nie przerywa pipeline
-      }
+    post {
+        always {
+            echo 'Pipeline finished!'
+        }
+        success {
+            echo 'Pipeline succeeded!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
     }
-
-    stage('Deploy') {
-      steps {
-        echo '📦 Preparing files for deployment...'
-        sh '''
-          mkdir -p $APP_DIR
-          cp -r * $APP_DIR  # Kopiuje wszystkie pliki do katalogu tymczasowego
-        '''
-      }
-    }
-
-    stage('Publish') {
-      steps {
-        echo '📤 Archiving build artifact...'
-        sh '''
-          tar -czf $PACKAGE_NAME -C /tmp express-app
-          echo "Artifact published to workspace: $PACKAGE_NAME"
-        '''
-        archiveArtifacts artifacts: "$PACKAGE_NAME", fingerprint: true
-      }
-    }
-
-    stage('Start server') {
-      steps {
-        echo '🚀 Starting the server...'
-        sh '''
-          mkdir -p $RUN_DIR
-          tar -xzf $PACKAGE_NAME -C $RUN_DIR
-          cd $RUN_DIR
-          ls -la  # Wydrukuj zawartość katalogu, aby upewnić się, że package.json jest obecny
-          npm install
-          nohup npm start &
-          echo "🌐 App started at http://localhost:3000"
-        '''
-      }
-    }
-  }
-
-  post {
-    always {
-      echo '🧼 Cleaning up...'
-    }
-    success {
-      echo '✅ Pipeline completed successfully!'
-    }
-    failure {
-      echo '❌ Pipeline failed!'
-    }
-  }
 }
