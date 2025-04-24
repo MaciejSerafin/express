@@ -13,20 +13,10 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Install Dependencies') {
             steps {
-                echo "Installing dependencies and building..."
-                script {
-                    // Sprawdzenie czy plik package.json istnieje
-                    if (!fileExists('package.json')) {
-                        echo "Brak pliku package.json w katalogu repozytorium!"
-                        error "Brak pliku package.json, niemożliwe jest zbudowanie aplikacji!"
-                    }
-                    
-                    // Instalacja zależności i budowanie
-                    sh 'npm install'
-                    sh 'npm run build' // Jeśli masz skrypt build w package.json, zmień wg potrzeb
-                }
+                echo "Installing dependencies..."
+                sh 'npm install'
             }
         }
 
@@ -34,7 +24,7 @@ pipeline {
             steps {
                 echo "Archiving build artifact..."
                 // Spakowanie aplikacji
-                sh 'tar -czf express.tar.gz -C $APP_DIR express-app'
+                sh 'tar -czf express.tar.gz .'
                 echo "Artifact published to workspace: express.tar.gz"
                 archiveArtifacts artifacts: 'express.tar.gz', allowEmptyArchive: true
             }
@@ -49,7 +39,7 @@ pipeline {
                     // Rozpakowanie artefaktu
                     sh 'tar -xzf express.tar.gz -C /root/express-run'
                     // Przechodzimy do katalogu aplikacji
-                    sh 'cd /root/express-run && npm start' // Uruchomienie aplikacji w przypadku Node.js
+                    sh 'cd /root/express-run && npm start'
                 }
             }
         }
@@ -57,8 +47,7 @@ pipeline {
         stage('Test') {
             steps {
                 echo "Running tests..."
-                // Uruchomienie testów jeśli są zdefiniowane
-                sh 'npm test' // Zmieniaj w zależności od konfiguracji
+                sh 'npm test'
             }
         }
 
@@ -66,8 +55,6 @@ pipeline {
             steps {
                 echo "Deploying the application..."
                 // Twoje kroki wdrożeniowe
-                // Na przykład, może to być upload na serwer produkcyjny
-                // sh 'scp express-app.tar.gz user@server:/path/to/deploy'
             }
         }
     }
